@@ -1,0 +1,95 @@
+name: Update HBOT News
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'  # Monday 07:00 Finnish time (UTC+2)
+  workflow_dispatch:       # Allow manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch HBOT news via Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import urllib.request, json, os
+
+          key = os.environ["ANTHROPIC_API_KEY"]
+
+          prompt = """Search for recent (2024-2025) research about hyperbaric oxygen therapy (HBOT) related to:
+1. Long COVID / post-COVID syndrome (category: longcovid)
+2. Burnout syndrome (category: burnout)
+3. Chronic fatigue / ME-CFS (category: fatigue)
+4. General HBOT neurological or recovery benefits (category: hbot)
+
+Return ONLY a valid JSON array, no other text:
+[{"title":"...","url":"https://...","date":"2025-01-10","category":"longcovid","source":"Journal name"},...]
+
+Find 3-4 articles per category. Prioritize peer-reviewed studies."""
+
+          payload = json.dumps({
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 3000,
+            "tools": [{"type": "web_search_20250305", "name": "web_search"}],
+            "messages": [{"role": "user", "content": prompt}]
+          }).encode()
+
+          req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+              "x-api-key": key,
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json",
+            }
+          )
+
+          with urllib.request.urlopen(req) as res:
+            data = json.loads(res.read())
+
+          text = ""
+          for block in data.get("content", []):
+            if block.get("type") == "text":
+              text += block["text"]
+
+          import re
+          match = re.search(r'\[[\s\S]*\]', text)
+          if not match:
+            raise Exception("No JSON found in response")
+
+          articles = json.loads(match.group())
+
+          label_map = {"longcovid": "Long COVID", "burnout": "Burnout", "fatigue": "Fatigue / ME-CFS", "hbot": "HBOT General"}
+          badge_map = {"longcovid": "badge-longcovid", "burnout": "badge-burnout", "fatigue": "badge-fatigue", "hbot": "badge-hbot"}
+
+          from datetime import datetime
+          output = {
+            "updated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "articles": [{
+              "title": a.get("title", ""),
+              "link": a.get("url", "#"),
+              "date": a.get("date", ""),
+              "source": a.get("source", "Research"),
+              "tag": a.get("category", "hbot"),
+              "label": label_map.get(a.get("category"), "HBOT"),
+              "badge": badge_map.get(a.get("category"), "badge-hbot"),
+            } for a in articles if a.get("title")]
+          }
+
+          with open("news.json", "w") as f:
+            json.dump(output, f, ensure_ascii=False, indent=2)
+
+          print(f"Saved {len(output['articles'])} articles")
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "HBOT Bot"
+          git config user.email "bot@hbot"
+          git add news.json
+          git diff --staged --quiet || git commit -m "Weekly HBOT news update"
+          git push
