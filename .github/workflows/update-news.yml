@@ -3,7 +3,9 @@ name: Update HBOT News
 on:
   schedule:
     - cron: '0 5 * * 1'  # Monday 07:00 Finnish time (UTC+2)
-  workflow_dispatch:       # Allow manual trigger
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   update:
