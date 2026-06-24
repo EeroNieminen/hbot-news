@@ -1,0 +1,22 @@
+{
+  "name": "HBOT Weekly",
+  "short_name": "HBOT",
+  "description": "Weekly HBOT research: Long COVID, burnout & fatigue",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

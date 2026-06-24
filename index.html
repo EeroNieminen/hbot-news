@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HBOT News">
+  <meta name="theme-color" content="#0a1628">
+  <link rel="manifest" href="manifest.json">
+  <title>HBOT Weekly</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a1628; --card: #111f38; --card2: #162440;
+      --accent: #00b4d8; --green: #52b788; --orange: #f4a261; --red: #e76f51;
+      --text: #e8f4f8; --text2: #8ab4c8; --border: #1e3a5f;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+
+    header { background: #0d2144; padding: 52px 20px 14px; padding-top: calc(52px + env(safe-area-inset-top)); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+    h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+    h1 span { color: var(--accent); }
+    .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+    .last-updated { font-size: 12px; color: var(--text2); }
+    .refresh-btn { background: var(--card2); border: 1px solid var(--border); color: var(--accent); padding: 8px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .refresh-btn:active { opacity: 0.7; }
+    .refresh-btn.spinning .icon { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .tabs { display: flex; gap: 8px; padding: 12px 16px 0; overflow-x: auto; scrollbar-width: none; background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 114px; z-index: 9; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text2); margin-bottom: 10px; }
+    .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .main { padding: 16px; max-width: 640px; margin: 0 auto; }
+
+    .section-header { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin: 18px 0 8px; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 10px; cursor: pointer; text-decoration: none; display: block; }
+    .card:active { opacity: 0.85; }
+    .card-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
+    .badge-longcovid { background: rgba(0,180,216,.15); color: var(--accent); }
+    .badge-burnout   { background: rgba(244,162,97,.15); color: var(--orange); }
+    .badge-fatigue   { background: rgba(82,183,136,.15); color: var(--green); }
+    .badge-hbot      { background: rgba(231,111,81,.15); color: var(--red); }
+    .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 6px; }
+    .card-meta { display: flex; gap: 10px; }
+    .card-source { font-size: 11px; color: var(--text2); }
+    .card-date { font-size: 11px; color: var(--text2); }
+
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+    .stat-num { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    .next-update { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .next-update-text { font-size: 13px; color: var(--text2); }
+    .next-update-text strong { color: var(--text); display: block; font-size: 13px; margin-bottom: 1px; }
+
+    .loading { text-align: center; padding: 60px 20px; color: var(--text2); }
+    .loading-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    .loading-text { font-size: 14px; }
+    .loading-sub { font-size: 12px; margin-top: 6px; opacity: 0.6; }
+
+    .setup-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin: 24px 0; }
+    .setup-box h2 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .setup-box p { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+    .setup-box input { width: 100%; background: var(--card2); border: 1px solid var(--border); color: var(--text); padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 12px; font-family: monospace; }
+    .setup-box input:focus { outline: none; border-color: var(--accent); }
+    .setup-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 13px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .setup-btn:active { opacity: 0.85; }
+
+    .error-box { background: rgba(231,111,81,.1); border: 1px solid rgba(231,111,81,.3); border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 14px; color: var(--red); text-align: center; }
+    .settings-link { text-align: center; margin-top: 16px; }
+    .settings-link button { background: transparent; border: none; color: var(--text2); font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+    footer { text-align: center; padding: 28px 20px; font-size: 11px; color: var(--text2); opacity: 0.5; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>HBOT <span>Weekly</span></h1>
+      <div class="subtitle">Burnout · Long COVID · Fatigue research</div>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+      <span class="icon">↻</span> Refresh
+    </button>
+  </div>
+  <div class="last-updated" id="lastUpdated">—</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="setTab('all', this)">All</button>
+  <button class="tab" onclick="setTab('longcovid', this)">Long COVID</button>
+  <button class="tab" onclick="setTab('burnout', this)">Burnout</button>
+  <button class="tab" onclick="setTab('fatigue', this)">Fatigue</button>
+  <button class="tab" onclick="setTab('hbot', this)">HBOT General</button>
+</div>
+
+<div class="main">
+  <div id="content">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<footer>Powered by Claude AI · Sources: PubMed, research journals</footer>
+
+<script>
+const MODEL = 'claude-haiku-4-5-20251001';
+let allArticles = [];
+let currentTab = 'all';
+let isLoading = false;
+
+function getKey() { return localStorage.getItem('anthropic_key') || ''; }
+
+function setTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderContent();
+}
+
+function showSetup() {
+  document.getElementById('content').innerHTML = `
+    <div class="setup-box">
+      <h2>API-avain</h2>
+      <p>Syötä Anthropic API-avaimesi. Se tallennetaan vain tähän laitteeseen.</p>
+      <input type="password" id="keyInput" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="setup-btn" onclick="saveKey()">Tallenna ja lataa uutiset</button>
+    </div>`;
+}
+
+function saveKey() {
+  const k = document.getElementById('keyInput').value.trim();
+  if (!k.startsWith('sk-ant-')) {
+    alert('Tarkista avain — sen pitää alkaa sk-ant-'); return;
+  }
+  localStorage.setItem('anthropic_key', k);
+  loadAll();
+}
+
+function clearKey() {
+  localStorage.removeItem('anthropic_key');
+  localStorage.removeItem('hbot_cache');
+  showSetup();
+}
+
+async function fetchNews() {
+  const key = getKey();
+  const prompt = `Search the web for recent (2024-2025) research articles and studies about hyperbaric oxygen therapy (HBOT) related to these four topics:
+1. Long COVID / post-COVID syndrome
+2. Burnout syndrome
+3. Chronic fatigue / ME-CFS / exhaustion
+4. General HBOT neurological benefits
+
+Return ONLY a JSON array, no other text, like this:
+[{"title":"...","url":"https://...","date":"2025-01-10","category":"longcovid","source":"Journal name"},...]
+
+Categories: longcovid, burnout, fatigue, hbot
+Find 3-4 articles per category. Prioritize peer-reviewed studies.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-allow-browser': 'true',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 3000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{ role: 'user', content: prompt }],
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  let text = '';
+  for (const block of data.content || []) {
+    if (block.type === 'text') text += block.text;
+  }
+
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('Vastauksen jäsennys epäonnistui');
+
+  const items = JSON.parse(match[0]);
+  const labelMap = { longcovid: 'Long COVID', burnout: 'Burnout', fatigue: 'Fatigue / ME-CFS', hbot: 'HBOT General' };
+  const badgeMap = { longcovid: 'badge-longcovid', burnout: 'badge-burnout', fatigue: 'badge-fatigue', hbot: 'badge-hbot' };
+
+  return items.map(a => ({
+    title: a.title || '',
+    link: a.url || '#',
+    pubDate: a.date ? new Date(a.date) : new Date(),
+    source: a.source || 'Research',
+    tag: a.category || 'hbot',
+    label: labelMap[a.category] || 'HBOT',
+    badge: badgeMap[a.category] || 'badge-hbot',
+  })).filter(a => a.title);
+}
+
+function formatDate(d) {
+  if (!d || isNaN(d)) return '';
+  const diff = Math.floor((Date.now() - d) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return `${diff} days ago`;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function nextMonday() {
+  const now = new Date();
+  const d = now.getDay();
+  const days = d === 1 ? 7 : (8 - d) % 7 || 7;
+  const next = new Date(now);
+  next.setDate(now.getDate() + days);
+  return next.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ' klo 07:00';
+}
+
+function renderContent() {
+  const div = document.getElementById('content');
+  const filtered = currentTab === 'all' ? allArticles : allArticles.filter(a => a.tag === currentTab);
+
+  if (filtered.length === 0) {
+    div.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:14px">Ei artikkeleita tässä kategoriassa.</div>';
+    return;
+  }
+
+  const counts = {
+    longcovid: allArticles.filter(a => a.tag === 'longcovid').length,
+    fatigue: allArticles.filter(a => a.tag === 'fatigue' || a.tag === 'burnout').length,
+    hbot: allArticles.filter(a => a.tag === 'hbot').length,
+  };
+
+  let html = '';
+  if (currentTab === 'all') {
+    html += `<div class="stat-row">
+      <div class="stat-card"><div class="stat-num">${counts.longcovid}</div><div class="stat-label">Long COVID</div></div>
+      <div class="stat-card"><div class="stat-num">${counts.fatigue}</div><div class="stat-label">Fatigue</div></div>
+      <div class="stat-card"><div class="stat-num">${counts.hbot}</div><div class="stat-label">HBOT</div></div>
+    </div>
+    <div class="next-update">
+      <div style="font-size:20px">📅</div>
+      <div class="next-update-text"><strong>Seuraava päivitys</strong>${nextMonday()}</div>
+    </div>`;
+
+    const groups = ['longcovid', 'burnout', 'fatigue', 'hbot'];
+    const labels = { longcovid: 'Long COVID', burnout: 'Burnout', fatigue: 'Chronic Fatigue / ME-CFS', hbot: 'HBOT General' };
+    groups.forEach(tag => {
+      const arts = allArticles.filter(a => a.tag === tag);
+      if (!arts.length) return;
+      html += `<div class="section-header">${labels[tag]}</div>`;
+      arts.forEach(a => html += card(a));
+    });
+  } else {
+    filtered.forEach(a => html += card(a));
+  }
+
+  html += `<div class="settings-link"><button onclick="clearKey()">Vaihda API-avain</button></div>`;
+  div.innerHTML = html;
+}
+
+function card(a) {
+  const safe = a.link.startsWith('http') ? a.link : '#';
+  return `<a class="card" href="${safe}" target="_blank" rel="noopener noreferrer">
+    <span class="card-badge ${a.badge}">${a.label}</span>
+    <div class="card-title">${a.title.replace(/</g,'&lt;')}</div>
+    <div class="card-meta">
+      <span class="card-source">${a.source}</span>
+      <span class="card-date">${formatDate(a.pubDate)}</span>
+    </div>
+  </a>`;
+}
+
+async function loadAll() {
+  if (isLoading) return;
+  if (!getKey()) { showSetup(); return; }
+  isLoading = true;
+
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  document.getElementById('content').innerHTML = `<div class="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Claude hakee tuoreimmat tutkimukset...</div>
+    <div class="loading-sub">Tämä kestää noin 15–30 sekuntia</div>
+  </div>`;
+
+  try {
+    const cache = localStorage.getItem('hbot_cache');
+    if (cache) {
+      const { articles, ts } = JSON.parse(cache);
+      if (Date.now() - new Date(ts).getTime() < 24 * 3600000) {
+        allArticles = articles.map(a => ({ ...a, pubDate: new Date(a.pubDate) }));
+        document.getElementById('lastUpdated').textContent = 'Välimuistista · ' + new Date(ts).toLocaleDateString('fi-FI');
+        renderContent();
+        btn.classList.remove('spinning');
+        isLoading = false;
+        return;
+      }
+    }
+
+    allArticles = await fetchNews();
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = 'Päivitetty ' + now.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' }) + ' · ' + now.toLocaleDateString('fi-FI');
+    localStorage.setItem('hbot_cache', JSON.stringify({ articles: allArticles.map(a => ({ ...a, pubDate: a.pubDate?.toISOString() })), ts: now.toISOString() }));
+    renderContent();
+  } catch (err) {
+    const msg = err.message || 'Tuntematon virhe';
+    const isAuth = msg.includes('401') || msg.includes('auth') || msg.includes('key');
+    document.getElementById('content').innerHTML = `
+      <div class="error-box">
+        ${isAuth ? 'API-avain virheellinen tai vanhentunut.' : 'Lataus epäonnistui: ' + msg}
+      </div>
+      <div class="settings-link"><button onclick="clearKey()">Syötä uusi API-avain</button></div>`;
+  }
+
+  btn.classList.remove('spinning');
+  isLoading = false;
+}
+
+window.addEventListener('load', () => {
+  if (!getKey()) { showSetup(); return; }
+  loadAll();
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
